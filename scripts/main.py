@@ -1,9 +1,15 @@
-import Image as IM
 import keras
+from PIL import Image
 import tensorflow as tf
 import numpy as np
 from fastapi import FastAPI
+import os
+dir = os.path.dirname(__file__)
+app = FastAPI()
 
+from pydantic import BaseModel
+class Image(BaseModel):
+    image_path: str
 '''Defining Model'''
 def get_model():
     # Defining the model with pretrained weights
@@ -20,7 +26,8 @@ def get_model():
 '''Made changes on input'''
 def modify_input(image_url, input_dimentions):
     # Loading image
-    image = keras.preprocessing.image.load_img('resources/'+image_url, target_size=input_dimentions)
+    file_path = os.path.join(dir, '../resources/'+image_url)
+    image = keras.preprocessing.image.load_img(file_path, target_size=input_dimentions)
     # Making adjustments to the image
     doc = keras.preprocessing.image.img_to_array(image)
     doc = np.expand_dims(doc, axis=0)
@@ -37,8 +44,9 @@ def get_predictions(model, doc):
     return top_predictions[0][0][1]
 
 '''Get response'''
-def get_prediction(image_path: IM):
+@app.post('/predict')
+def get_prediction(image_path: Image):
     model, input_dimentions = get_model()
-    doc = modify_input(image_path.name, input_dimentions)
+    doc = modify_input(image_path.image_path, input_dimentions)
     response = get_predictions(model, doc)
     return{'response':response}
