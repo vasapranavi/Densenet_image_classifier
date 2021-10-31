@@ -2,7 +2,7 @@ import keras
 from PIL import Image
 import tensorflow as tf
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import os
 dir = os.path.dirname(__file__)
 app = FastAPI()
@@ -46,7 +46,18 @@ def get_predictions(model, doc):
 '''Get response'''
 @app.post('/predict')
 def get_prediction(image_path: Image):
-    model, input_dimentions = get_model()
-    doc = modify_input(image_path.image_path, input_dimentions)
-    response = get_predictions(model, doc)
-    return{'response':response}
+    if image_path.image_path == None:
+        raise HTTPException(status_code=400, detail='Invalid image path')
+    try:
+        model, input_dimentions = get_model()
+        doc = modify_input(image_path.image_path, input_dimentions)
+        response = get_predictions(model, doc)
+        return{'response':response}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail='Input image not found')
+    except PermissionError:
+        raise HTTPException(status_code=400, detail='Invalid image path')
+    except Exception as e:
+        print(f'{type(e).__name__} was raised: {e}')
+        raise HTTPException(status_code=500, detail='Unexpected error has occured while serving your request')
+
